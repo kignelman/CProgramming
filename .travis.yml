@@ -7,6 +7,6 @@ before_install :
  - sudo apt-get install build-essential
  
 script:
- - gcc main.c
- - ./a.out
+ - cd bomberman
+ - make all
  
