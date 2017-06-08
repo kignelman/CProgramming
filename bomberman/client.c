@@ -1,138 +1,219 @@
-#include "socket_util.h"
-#include "request.h"
+//
+// Created by balbe on 28/05/2017.
+//
 
-int main(int argc, char **args)
+#include "client.h"
+
+void construct(client_t *client) {
+    client->socket = create_client("127.0.0.1",SERVER_PORT);
+    client->window = NULL;
+    client->window = SDL_CreateWindow("B O M B E R M A N",
+                                      SDL_WINDOWPOS_UNDEFINED,
+                                      SDL_WINDOWPOS_UNDEFINED,
+                                      MAP_WIDTH * 32,
+                                      MAP_HEIGHT * 32,
+                                      SDL_WINDOW_SHOWN);
+#if defined (WIN32)
+    client->bomb_image = IMG_Load("sprites/Bomb.png");
+    client->up_image = IMG_Load("sprites/BUp.png");
+    client->right_image = IMG_Load("sprites/BRight.png");
+    client->down_image = IMG_Load("sprites/BDown.png");
+    client->left_image = IMG_Load("sprites/BLeft.png");
+    client->enemy_up_image = IMG_Load("sprites/EUp.png");
+    client->enemy_right_image = IMG_Load("sprites/ERight.png");
+    client->enemy_down_image = IMG_Load("sprites/EDown.png");
+    client->enemy_left_image = IMG_Load("sprites/ELeft.png");
+    client->fire_image = IMG_Load("sprites/Fire.png");
+    client->steel_image = IMG_Load("sprites/Steel.png");
+    client->brick_image = IMG_Load("sprites/Brick.png");
+#elif defined (linux)
+    client->bomb_image = IMG_Load("/usr/share/bomberman/sprites/Bomb.png");
+    client->up_image = IMG_Load("/usr/share/bomberman/sprites/BUp.png");
+    client->right_image = IMG_Load("/usr/share/bomberman/sprites/BRight.png");
+    client->down_image = IMG_Load("/usr/share/bomberman/sprites/BDown.png");
+    client->left_image = IMG_Load("/usr/share/bomberman/sprites/BLeft.png");
+    client->enemy_up_image = IMG_Load("/usr/share/bomberman/sprites/EUp.png");
+    client->enemy_right_image = IMG_Load("/usr/share/bomberman/sprites/ERight.png");
+    client->enemy_down_image = IMG_Load("/usr/share/bomberman/sprites/EDown.png");
+    client->enemy_left_image = IMG_Load("/usr/share/bomberman/sprites/ELeft.png");
+    client->fire_image = IMG_Load("/usr/share/bomberman/sprites/Fire.png");
+    client->steel_image = IMG_Load("/usr/share/bomberman/sprites/Steel.png");
+    client->brick_image = IMG_Load("/usr/share/bomberman/sprites/Brick.png");
+#endif
+}
+
+int reset_fd_set(client_t *client) {
+
+    FD_ZERO(&(client->set));
+    FD_SET(client->socket, &(client->set));
+    return client->socket;
+}
+
+void on_disconnect(client_t *client) {
+    if (client->socket != INVALID_SOCKET)
+        closesocket(client->socket);
+    client->socket = INVALID_SOCKET;
+    client->start = 0;
+    printf("Disconnect \n");
+}
+
+void listen_receive_server(client_t *client) {
+
+    int reading;
+    server_request_t request;
+
+    if (!FD_ISSET(client->socket, &(client->set)))
+        return;
+
+    reading = recv_server_request(client->socket, &request);
+
+    if (reading == 0)
+        on_disconnect(client);
+    if (reading > 0) {
+        if (request.protocol == GP_UPDATE)
+            draw(client, request);
+    }
+
+}
+
+void draw_image_at(client_t *client, SDL_Surface *image, int i, int j)
 {
-  int socket, i, j, k, id, ret, reading;
-  char c;
-  request_t request;
-  client_t client;
-  fd_set set;
-  struct timeval tv;
-  
-  client.id = -1;
+    SDL_Rect rect = {j * 32, i * 32, 32, 32};
+    SDL_BlitSurface(image, NULL, SDL_GetWindowSurface(client->window), &rect);
+}
 
-  socket = create_client("127.0.0.1", 4242);
 
-  while (1)
-    {
-      FD_ZERO(&set);
-      FD_SET(0, &set);
-      FD_SET(socket, &set);
-      tv.tv_sec = 0;
-      tv.tv_usec = 10;
-      if ((ret = select(socket + 1, &set, NULL, NULL, &tv)) < 0)
-	die("select()");
-      if (ret)
-	{
-	  if (FD_ISSET(0, &set))
-	    {
-	      c = getchar();
-	      if (c == '.')
-		exit(0);
-	      
-	      if (c == 'z' || c == 'q' || c == 's' || c == 'd' || c == 'b')
-		{
-		  if (c == 'b')
-		    request.protocol = P_POSE_BOMB;
-		  else
-		    {
-		      request.protocol = P_MOVE;
-		      switch (c)
-			{
-			case 'z':
-			  request.direction = UP;
-			  break;
-			case 's':
-			  request.direction = DOWN;
-			  break;
-			case 'd':
-			  request.direction = RIGHT;
-			  break;
-			default:
-			  request.direction = LEFT;
-			  break;
-			}
-		    }
-		  write(socket, &request, sizeof(request_t));
-		}
-	    }
-	  if (FD_ISSET(socket, &set))
-	    {
-	      reading = read(socket, &request, sizeof(request_t));
-	      if (reading == 0)
-		{
-		  printf("server is disconnect ....\n");
-		  fflush(stdout);
-		  close(socket);
-		  exit(0);
-		}
-	      else
-		{
-		  if (request.protocol == P_CONNECT)
-		    {
-		      id = request.id;
-		      
-		      for (i = 0; i < MAX_CLIENTS; i++)
-			if (request.clients[i].id == id)
-			  client = request.clients[i];
-		    }
-		  
-		  if (request.protocol == P_GAME_OVER)
-		    {
-		      printf("G A M E O V E R\n");
-		      fflush(stdout);
-		      exit(0);
-		    }
-		  
-		  if (request.protocol == P_UPDATE)
-		    {
-		      system("/bin/stty raw && /bin/stty cooked && clear");
-		      
-		      for (i = 0; i < 10; i++)
-			if (request.clients[i].id == id && id > 0)
-			  client = request.clients[i];
-		      
-		      printf("............................\n");
-		      printf("....  B O M B E R M A N  ...\n");
-		      printf("............................\n");
-		      printf("Quit    : .\n");
-		      printf("Up      : z\n");
-		      printf("Right   : d\n");
-		      printf("Down    : s\n");
-		      printf("Left    : q\n\n");
-		      
-		      for (i = 0; i < MAP_ROW; i++)
-			{
-		      for (j = 0; j < MAP_COL; j++)
-			{
-			  int find = 0;
-			  for (k = 0; k < MAX_CLIENTS; k++)
-			    {
-			      client_t o = request.clients[k];
-			      
-			      if (o.id > 0 && o.posx == j && o.posy == i)
-				{
-				  if (client.id == o.id)
-				    printf(" X |");
-				  else
-				    printf(" x |");
-				  find = 1;
-				  break;
-				}
-			    }
-			  if (find == 0)
-			    printf(" %c |", request.map[i][j]);
-			}
-		      printf("\n");
-		      for (k = 0; k < MAP_COL; k++)
-			printf(" _  ");
-		      printf("\n");
-			}
-		      fflush(stdout);
-		    }
-		}
-	    }
-	}
-    } 
+void draw(client_t *client, server_request_t request) {
+    int i, j;
+    SDL_Surface *surface = SDL_GetWindowSurface(client->window);
+    SDL_Rect rect = {0, 0, MAP_WIDTH * 32, MAP_HEIGHT * 32};
+    SDL_FillRect(surface, &rect, SDL_MapRGB(surface->format, 0, 0, 0));
+    for (i = 0; i < MAP_HEIGHT; i++) {
+        for (j = 0; j < MAP_WIDTH; j++) {
+            if (request.clients[i][j][0] == 1) {
+                if (request.position[0] == i && request.position[1] == j && request.alive) {
+                    switch (request.clients[i][j][1]) {
+                        case UP:
+                            draw_image_at(client, client->up_image, i, j);
+                            break;
+                        case RIGHT:
+                            draw_image_at(client, client->right_image, i, j);
+                            break;
+                        case DOWN:
+                            draw_image_at(client, client->down_image, i, j);
+                            break;
+                        case LEFT:
+                            draw_image_at(client, client->left_image, i, j);
+                            break;
+                        default:
+                            break;
+                    }
+                } else {
+                    switch (request.clients[i][j][1]) {
+                        case UP:
+                            draw_image_at(client, client->enemy_up_image, i, j);
+                            break;
+                        case RIGHT:
+                            draw_image_at(client, client->enemy_right_image, i, j);
+                            break;
+                        case DOWN:
+                            draw_image_at(client, client->enemy_down_image, i, j);
+                            break;
+                        case LEFT:
+                            draw_image_at(client, client->enemy_left_image, i, j);
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            } else {
+                switch (request.map[i][j][0]) {
+                    case MAP_BRICK:
+                        draw_image_at(client, client->brick_image, i , j);
+                        break;
+                    case MAP_STEEL:
+                        draw_image_at(client, client->steel_image, i, j);
+                        break;
+                    case MAP_BOMB:
+                        draw_image_at(client, client->bomb_image, i, j);
+                        break;
+                    case MAP_FIRE:
+                        draw_image_at(client, client->fire_image, i, j);
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+    }
+
+    SDL_UpdateWindowSurface(client->window);
+}
+
+void listen_key_event(client_t *client) {
+    SDL_Event event;
+
+    while (SDL_PollEvent(&event)) {
+        client_request_t client_request;
+        client_request.protocol = GP_MOVE;
+        client_request.value = -1;
+        switch (event.type) {
+            case SDL_KEYUP:
+                switch (event.key.keysym.sym) {
+                    case SDLK_UP:
+                    case SDLK_z:
+                        client_request.value = UP;
+                        break;
+                    case SDLK_RIGHT:
+                    case SDLK_d:
+                        client_request.value = RIGHT;
+                        break;
+                    case SDLK_DOWN:
+                    case SDLK_s:
+                        client_request.value = DOWN;
+                        break;
+                    case SDLK_LEFT:
+                    case SDLK_q:
+                        client_request.value = LEFT;
+                        break;
+                    case SDLK_SPACE:
+                        client_request.protocol = GP_BOMB;
+                        client_request.value = 1;
+                        break;
+                    default:
+                        break;
+                }
+                break;
+            case SDL_QUIT:
+                client->start = 0;
+                break;
+            default:
+                break;
+        }
+
+        if (client_request.value != -1) {
+            send_client_request(client->socket, &client_request);
+        }
+    }
+}
+
+void run(client_t *client) {
+
+    int reading;
+    struct timeval time;
+    client->start = 1;
+    while (client->start && client->socket != INVALID_SOCKET) {
+        time.tv_sec = 0;
+        time.tv_usec = 10;
+        reading = select(reset_fd_set(client) + 1, &(client->set), NULL, NULL, &time);
+        if (reading > 0) {
+            listen_receive_server(client);
+        } else if (reading == 0) {
+            listen_key_event(client);
+        }
+    }
+
+    if (client->socket != INVALID_SOCKET) {
+        on_disconnect(client);
+    }
 }

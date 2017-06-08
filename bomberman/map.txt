@@ -1,10 +1,20 @@
-ssssssssss
-s        s
-s s      s
-s s      s
-s w w w  s
-s w      s
-s        s
-s        s
-s        s
-ssssssssss
+ssssssssssssssssssss
+s       bbbbb      s
+s        bbb       s
+s         b        s
+s                  s
+s                  s
+s                  s
+sb                bs
+sbb              bbs
+sbbb            bbbs
+sbb              bbs
+sb                bs
+s                  s
+s                  s
+s                  s
+s                  s
+s         b        s
+s        bbb       s
+s       bbbbb      s
+ssssssssssssssssssss

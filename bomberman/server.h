@@ -1,47 +1,144 @@
-#if defined (WIN32)
-    #include <Winsock2.h>
-    typedef int socklen_t;
-#elif defined (linux)
-    #include <sys/types.h> 
-    #include <sys/socket.h> 
-    #include <stdio.h> 
-    #include <netinet/in.h>
-    #include <unistd.h>
-    struct sockaddr_in server_address; 
-    struct sockaddr_in client_address; 
-#endif
+//
+// Created by balbe on 28/05/2017.
+//
 
-#include <sys/time.h> 
-#include <sys/ioctl.h>
+#ifndef GAME_SERVER_H
+#define GAME_SERVER_H
 
-int server_sockfd;
+#include "socket_util.h"
+#define INFO_ALIVE 0
+#define INFO_X 1
+#define INFO_Y 2
+#define INFO_DIRECTION 3
+#define INFO_NEXT_DIRECTION 4
 
-int client_sockfd; 
+typedef struct server_s {
+    int start;
+    fd_set set;
+    SOCKET socket;
+    SOCKET clients[MAX_CLIENTS];
+    int info[MAX_CLIENTS][5];
+    int map[MAP_HEIGHT][MAP_WIDTH][2];
+} server_t;
 
-int server_len;
+/**
+ * Permet de creer le server.
+ *
+ * @param server
+ */
+void construct(server_t *server);
 
-int client_len; 
+/**
+ *
+ * @param i
+ * @param j
+ * @return
+ */
+int is_map_coordinate(int i, int j);
 
-int result; 
+/**
+ *
+ * @param server
+ * @param x
+ * @param y
+ * @return
+ */
+int is_free(server_t *server,  int x, int y);
 
-fd_set readfds;
 
-fd_set testfds;
+/**
+ *
+ * @param server
+ */
+int reset_fd_set(server_t *server);
 
-server_sockfd = socket(AF_INET, SOCK_STREAM, 0);
+/**
+ * Lorsque le client envoi une requete.
+ *
+ * @param position
+ * @param request
+ * @param server
+ */
+void on_request(server_t * server, int position, client_request_t request);
 
-server_address.sin_family = AF_INET; 
+/**
+ *
+ * @param client
+ * @param server
+ * @return
+ */
+int on_connect(server_t *server, SOCKET client);
 
-server_address.sin_addr.s_addr = htonl(INADDR_ANY); 
+/**
+ * Lorsqu'un client se deconnecte.
+ *
+ * @param position
+ * @param server
+ * @return
+ */
+int on_disconnect(server_t *server, int position);
 
-server_address.sin_port = htons(9734); 
+/**
+ * Lorsque le client se deplace.
+ *
+ * @param server
+ * @param position
+ * @param direction
+ * @return
+ */
+int on_move(server_t * server, int position, int direction);
 
-server_len = sizeof(server_address); 
+/**
+ * Lorsque le client veut poser une bombe.
+ *
+ * @param server
+ * @param position
+ * @param direction
+ * @return
+ */
+int on_place_bomb(server_t * server, int position);
 
-bind(server_sockfd, (struct sockaddr *)&server_address, server_len); 
+/**
+ *
+ * @param server
+ */
+void listen_accept_client(server_t *server);
 
-listen(server_sockfd, 5); 
+/**
+ *
+ * @param server
+ */
+void listen_receive_client(server_t *server, int position);
 
-FD_ZERO(&readfds); 
+/**
+ *
+ * @param server
+ * @param i
+ * @param j
+ */
+void explode_bomb(server_t *server, int i, int j);
 
-FD_SET(server_sockfd, &readfds);
+/**
+ *
+ * @param i
+ * @param j
+ * @return
+ */
+int is_map_coordinate(int i, int j);
+
+/**
+ * Mettre a jour le server
+ *
+ * @param server
+ */
+void update(server_t *server);
+
+/**
+ *
+ * Demarre le serveur.
+ *
+ * @param server
+ */
+void run(server_t * server);
+
+#endif //GAME_SERVER_H
