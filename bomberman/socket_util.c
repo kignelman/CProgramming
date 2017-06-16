@@ -2,7 +2,7 @@
 // Created by balbe on 28/05/2017.
 //
 
-#include "socket_util.h"
+#include "socket.h"
 
 
 struct sockaddr_in create_sockaddr_in(char *hostname, int port) {
@@ -66,7 +66,7 @@ int recv_server_request(SOCKET socket, server_request_t *request) {
 int recv_client_request(SOCKET socket, client_request_t *request) {
 
     char message[4];
-    int reading;
+    int reading = 0;
 
     reading = recv(socket, message, sizeof(message), 0);
     if (reading > 0) {

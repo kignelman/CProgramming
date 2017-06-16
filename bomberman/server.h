@@ -5,7 +5,7 @@
 #ifndef GAME_SERVER_H
 #define GAME_SERVER_H
 
-#include "socket_util.h"
+#include "socket.h"
 #define INFO_ALIVE 0
 #define INFO_X 1
 #define INFO_Y 2
@@ -19,6 +19,7 @@ typedef struct server_s {
     SOCKET clients[MAX_CLIENTS];
     int info[MAX_CLIENTS][5];
     int map[MAP_HEIGHT][MAP_WIDTH][2];
+    int updated;
 } server_t;
 
 /**
@@ -26,7 +27,7 @@ typedef struct server_s {
  *
  * @param server
  */
-void construct(server_t *server);
+void construct(server_t *server, int port);
 
 /**
  *

@@ -7,12 +7,12 @@
 int load_map(server_t *server, char *filename) {
     int row, col;
     int c;
-    FILE *file;
+    FILE *file = NULL;
 
     file = fopen(filename, "r");
     row = 0;
     col = 0;
-    while (1) {
+    while (file != NULL) {
         c = fgetc(file);
         if (col >= MAP_WIDTH) {
             col = 0;
@@ -43,10 +43,10 @@ int load_map(server_t *server, char *filename) {
  *
  * @param server
  */
-void construct(server_t *server) {
+void construct(server_t *server, int port) {
 
     int i, j;
-    server->socket = create_server("0.0.0.0", SERVER_PORT);
+    server->socket = create_server("0.0.0.0", port);
 
     server->start = 0;
 
@@ -63,12 +63,13 @@ void construct(server_t *server) {
             server->map[i][j][1] = 0;
         }
     }
-#if defined(WIN32)
+
+    server->updated = 1;
+#if  defined(WIN32)
     load_map(server, "map.txt");
-#elif defined(linux)
+#elif defined(linux) || defined(APPLE) || defined(__APPLE__)
     load_map(server, "/usr/share/bomberman/map.txt");
 #endif
-
 }
 
 /**
@@ -156,10 +157,10 @@ void send_map(server_t *server, int position) {
 
     int sending = send_server_request(server->clients[position], &request);
     if (sending) {
-        printf("send to %d : %d - %d \n", server->clients[position], server->info[position][INFO_X],
-               server->info[position][INFO_Y]);
+        printf("send to %d : (%d - %d) -> Alive %d\n", server->clients[position], server->info[position][INFO_X],
+               server->info[position][INFO_Y], server->info[position][INFO_ALIVE]);
     } else {
-        printf("Je n'arrive pas a envoyer la requete a %d\n", server->clients[position]);
+        printf("can't send to %d\n", server->clients[position]);
     }
     fflush(stdout);
 }
@@ -217,8 +218,10 @@ void on_request(server_t *server, int position, client_request_t request) {
     if (request.protocol == GP_MOVE) {
         printf("Client %d wan't move\n", server->clients[position]);
         on_move(server, position, request.value);
-    } else if (request.protocol == GP_BOMB)
+    } else if (request.protocol == GP_BOMB){
+        printf("Client %d wan't place bomb\n", server->clients[position]);
         on_place_bomb(server, position);
+    }
 }
 
 /**
@@ -233,6 +236,7 @@ int on_connect(server_t *server, SOCKET client) {
 
     printf("Connect()\n");
     fflush(stdout);
+    server->updated = 1;
 
     for (i = 0; i < MAX_CLIENTS; i++)
         if (server->clients[i] == INVALID_SOCKET) {
@@ -273,6 +277,7 @@ int on_disconnect(server_t *server, int position) {
     server->info[position][INFO_Y] = -1;
     server->info[position][INFO_DIRECTION] = -1;
     server->info[position][INFO_NEXT_DIRECTION] = -1;
+    server->updated = 1;
 
     return 1;
 }
@@ -314,6 +319,7 @@ int on_place_bomb(server_t *server, int position) {
     if (!(server->clients[position] != INVALID_SOCKET && server->info[position][INFO_ALIVE]))
         return 0;
 
+    server->updated = 1;
     server->map[server->info[position][INFO_X]][server->info[position][INFO_Y]][0] = MAP_BOMB;
     server->map[server->info[position][INFO_X]][server->info[position][INFO_Y]][1] = 20;
 
@@ -347,7 +353,7 @@ void listen_accept_client(server_t *server) {
  */
 void listen_receive_client(server_t *server, int position) {
 
-    int reading;
+    int reading = 0;
 
     client_request_t client_request;
 
@@ -356,9 +362,10 @@ void listen_receive_client(server_t *server, int position) {
     }
 
     reading = recv_client_request(server->clients[position], &client_request);
+
     if (reading > 0) {
         on_request(server, position, client_request);
-    } else if (reading == 0) {
+    } else {
         on_disconnect(server, position);
     }
 }
@@ -390,6 +397,7 @@ void make_fire(server_t *server, int i, int j) {
 void explode_bomb(server_t *server, int i, int j) {
     int fire_size = 3, k;
     make_fire(server, i, j);
+    server->updated = 1;
 
     for (k = 1; k < fire_size; k++) {
         if (is_map_coordinate(i + k, j)) {
@@ -520,6 +528,7 @@ void update_fires(server_t *server) {
             if (server->map[i][j][1] <= 0) {
                 server->map[i][j][0] = MAP_PATH;
                 server->map[i][j][1] = 0;
+                server->updated = 1;
             }
         }
     }
@@ -543,6 +552,7 @@ void update_alive(server_t *server) {
             server->info[i][INFO_X] = -1;
             server->info[i][INFO_Y] = -1;
             request.protocol = GP_GAME_OVER;
+            server->updated = 1;
             send_server_request(server->clients[i], &request);
         }
 }
@@ -563,24 +573,28 @@ void update_directions(server_t *server) {
                     if (can_move(server, server->info[i][INFO_X] - 1, server->info[i][INFO_Y])) {
                         server->info[i][INFO_X]--;
                         server->info[i][INFO_DIRECTION] = UP;
+                        server->updated = 1;
                     }
                     break;
                 case DOWN:
                     if (can_move(server, server->info[i][INFO_X] + 1, server->info[i][INFO_Y])) {
                         server->info[i][INFO_X]++;
                         server->info[i][INFO_DIRECTION] = DOWN;
+                        server->updated = 1;
                     }
                     break;
                 case LEFT:
                     if (can_move(server, server->info[i][INFO_X], server->info[i][INFO_Y] - 1)) {
                         server->info[i][INFO_Y]--;
                         server->info[i][INFO_DIRECTION] = LEFT;
+                        server->updated = 1;
                     }
                     break;
                 case RIGHT:
                     if (can_move(server, server->info[i][INFO_X], server->info[i][INFO_Y] + 1)) {
                         server->info[i][INFO_Y]++;
                         server->info[i][INFO_DIRECTION] = RIGHT;
+                        server->updated = 1;
                     }
                     break;
                 default:
@@ -604,8 +618,12 @@ void update(server_t *server) {
     update_alive(server);
     update_directions(server);
 
-    for (i = 0; i < MAX_CLIENTS; i++)
-        send_map(server, i);
+    if (server->updated) {
+        for (i = 0; i < MAX_CLIENTS; i++)
+            send_map(server, i);
+
+        server->updated = 0;
+    }
 }
 
 /**
@@ -617,25 +635,27 @@ void update(server_t *server) {
 void run(server_t *server) {
 
     int i, t = 0, reading;
-    struct timeval time;
+    struct timeval tv;
     server->start = 1;
     printf("Server is running ...\n");
 
     while (server->start && server->socket != INVALID_SOCKET) {
-        time.tv_sec = 0;
-        time.tv_usec = 10;
-        reading = select(reset_fd_set(server) + 1, &(server->set), NULL, NULL, &time);
-
+        tv.tv_sec = 0;
+        tv.tv_usec = 10;
+        reading = select(reset_fd_set(server) + 1, &(server->set), NULL, NULL, &tv);
         if (reading == 0) {
             if (t == 0)
                 update(server);
-            t = (t + 1) % 1000;
+            t = (t + 1) % 200;
         } else if (reading > 0) {
             listen_accept_client(server);
             for (i = 0; i < MAX_CLIENTS; i++)
                 listen_receive_client(server, i);
         }
     }
+
+    for (i = 0; i < MAX_CLIENTS; i++)
+        on_disconnect(server, i);
 
     if (server->socket != INVALID_SOCKET)
         closesocket(server->socket);

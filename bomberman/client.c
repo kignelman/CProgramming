@@ -4,8 +4,21 @@
 
 #include "client.h"
 
-void construct(client_t *client) {
-    client->socket = create_client("127.0.0.1",SERVER_PORT);
+SDL_Surface *load_image(char *source) {
+    char pf[1024];
+    memset(pf, '\0', sizeof(pf));
+#if defined(WIN32)
+    strcpy(pf, ".");
+#elif defined(linux)
+    strcpy(pf, "/usr/share/bomberman");
+#else
+    strcpy(pf, ".");
+#endif
+    return IMG_Load(strcat(pf, source));
+}
+
+void construct(client_t *client, char *hostname, int port) {
+    client->socket = create_client(hostname, port);
     client->window = NULL;
     client->window = SDL_CreateWindow("B O M B E R M A N",
                                       SDL_WINDOWPOS_UNDEFINED,
@@ -13,33 +26,18 @@ void construct(client_t *client) {
                                       MAP_WIDTH * 32,
                                       MAP_HEIGHT * 32,
                                       SDL_WINDOW_SHOWN);
-#if defined (WIN32)
-    client->bomb_image = IMG_Load("sprites/Bomb.png");
-    client->up_image = IMG_Load("sprites/BUp.png");
-    client->right_image = IMG_Load("sprites/BRight.png");
-    client->down_image = IMG_Load("sprites/BDown.png");
-    client->left_image = IMG_Load("sprites/BLeft.png");
-    client->enemy_up_image = IMG_Load("sprites/EUp.png");
-    client->enemy_right_image = IMG_Load("sprites/ERight.png");
-    client->enemy_down_image = IMG_Load("sprites/EDown.png");
-    client->enemy_left_image = IMG_Load("sprites/ELeft.png");
-    client->fire_image = IMG_Load("sprites/Fire.png");
-    client->steel_image = IMG_Load("sprites/Steel.png");
-    client->brick_image = IMG_Load("sprites/Brick.png");
-#elif defined (linux)
-    client->bomb_image = IMG_Load("/usr/share/bomberman/sprites/Bomb.png");
-    client->up_image = IMG_Load("/usr/share/bomberman/sprites/BUp.png");
-    client->right_image = IMG_Load("/usr/share/bomberman/sprites/BRight.png");
-    client->down_image = IMG_Load("/usr/share/bomberman/sprites/BDown.png");
-    client->left_image = IMG_Load("/usr/share/bomberman/sprites/BLeft.png");
-    client->enemy_up_image = IMG_Load("/usr/share/bomberman/sprites/EUp.png");
-    client->enemy_right_image = IMG_Load("/usr/share/bomberman/sprites/ERight.png");
-    client->enemy_down_image = IMG_Load("/usr/share/bomberman/sprites/EDown.png");
-    client->enemy_left_image = IMG_Load("/usr/share/bomberman/sprites/ELeft.png");
-    client->fire_image = IMG_Load("/usr/share/bomberman/sprites/Fire.png");
-    client->steel_image = IMG_Load("/usr/share/bomberman/sprites/Steel.png");
-    client->brick_image = IMG_Load("/usr/share/bomberman/sprites/Brick.png");
-#endif
+    client->bomb_image = load_image("/sprites/Bomb.png");
+    client->up_image = load_image("/sprites/BUp.png");
+    client->right_image = load_image("/sprites/BRight.png");
+    client->down_image = load_image("/sprites/BDown.png");
+    client->left_image = load_image("/sprites/BLeft.png");
+    client->enemy_up_image = load_image("/sprites/EUp.png");
+    client->enemy_right_image = load_image("/sprites/ERight.png");
+    client->enemy_down_image = load_image("/sprites/EDown.png");
+    client->enemy_left_image = load_image("/sprites/ELeft.png");
+    client->fire_image = load_image("/sprites/Fire.png");
+    client->steel_image = load_image("/sprites/Steel.png");
+    client->brick_image = load_image("/sprites/Brick.png");
 }
 
 int reset_fd_set(client_t *client) {
@@ -76,8 +74,7 @@ void listen_receive_server(client_t *client) {
 
 }
 
-void draw_image_at(client_t *client, SDL_Surface *image, int i, int j)
-{
+void draw_image_at(client_t *client, SDL_Surface *image, int i, int j) {
     SDL_Rect rect = {j * 32, i * 32, 32, 32};
     SDL_BlitSurface(image, NULL, SDL_GetWindowSurface(client->window), &rect);
 }
@@ -91,7 +88,7 @@ void draw(client_t *client, server_request_t request) {
     for (i = 0; i < MAP_HEIGHT; i++) {
         for (j = 0; j < MAP_WIDTH; j++) {
             if (request.clients[i][j][0] == 1) {
-                if (request.position[0] == i && request.position[1] == j && request.alive) {
+                if (request.position[0] == i && request.position[1] == j) {
                     switch (request.clients[i][j][1]) {
                         case UP:
                             draw_image_at(client, client->up_image, i, j);
@@ -129,7 +126,7 @@ void draw(client_t *client, server_request_t request) {
             } else {
                 switch (request.map[i][j][0]) {
                     case MAP_BRICK:
-                        draw_image_at(client, client->brick_image, i , j);
+                        draw_image_at(client, client->brick_image, i, j);
                         break;
                     case MAP_STEEL:
                         draw_image_at(client, client->steel_image, i, j);

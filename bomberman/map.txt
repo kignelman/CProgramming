@@ -2,19 +2,15 @@ ssssssssssssssssssss
 s       bbbbb      s
 s        bbb       s
 s         b        s
-s                  s
-s                  s
-s                  s
+s  b b b bbb b b b s
 sb                bs
-sbb              bbs
-sbbb            bbbs
-sbb              bbs
+sbb       s      bbs
+sbbb     sss    bbbs
+sbb       s      bbs
 sb                bs
+s  b b b b b b b b s
 s                  s
-s                  s
-s                  s
-s                  s
-s         b        s
+s  s s s  b  s s s s
 s        bbb       s
 s       bbbbb      s
 ssssssssssssssssssss

@@ -4,7 +4,7 @@
 
 #ifndef GAME_CLIENT_H
 #define GAME_CLIENT_H
-#include "socket_util.h"
+#include "socket.h"
 #include <SDL2/SDL.h>
 #if defined(WIN32)
 #include <SDL2/SDL_Image.h>
@@ -34,8 +34,9 @@ typedef struct client_s {
 /**
  *
  * @param client
+ * @param hostname
  */
-void construct(client_t *client);
+void construct(client_t *client, char * hostname, int port);
 
 /**
  * Ecoute les evenements du clavier.

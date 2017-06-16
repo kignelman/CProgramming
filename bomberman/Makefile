@@ -1,23 +1,35 @@
-all: client server
+CC	=	gcc
+CFLAGS  =   -Wall -Werror
+NAME1	=	server
+NAME2	=	client
+SRC1	=	server_main.c	\
+		socket_util.c \
+		server.c
 
+SRC2    = 	client_main.c	\
+		socket_util.c \
+		client.c
 
-client: objcli
-		gcc -o client client.o socket.o
-server: objser
-		gcc -o server server.o socket.o
+OBJ1	=	$(SRC1:%.c=%.o)
 
-objcli:
-	gcc -c client.c socket.c
+OBJ2	=	$(SRC2:%.c=%.o)
 
+RM	=	rm -f
 
-objser:
-	gcc -c server.c socket.c
+$(NAME1):	$(OBJ1)
+		$(CC) $(OBJ1) -o $(NAME1)
+
+$(NAME2):	$(OBJ2)
+		$(CC) $(OBJ2) -o $(NAME2) -lSDL2 -lSDL2main -lSDL2_image
+
+all:		$(NAME1) $(NAME2)
+
 clean:
-	rm -rf *.o
+	$(RM) $(OBJ1)
+	$(RM) $(OBJ2)
 
-fclean: clean
-	rm -rf server client
+fclean:		clean
+	$(RM) $(NAME1)
+	$(RM) $(NAME2)
 
-re: fclean all
-
-.PHONY: all
+re:	fclean all

@@ -6,8 +6,8 @@
 #define GAME_SOCKET_UTIL_H
 #define MAX_CLIENTS 20
 #define MAP_WIDTH 20
-#define MAP_HEIGHT 20
-#define SERVER_PORT 9899
+#define MAP_HEIGHT 16
+#define SERVER_PORT 4242
 #define MAP_PATH 1
 #define GP_UPDATE 10
 #define GP_MOVE 2
@@ -23,6 +23,8 @@
 #define MAP_BOMB 6
 
 #include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 #include <unistd.h>
 
 #if defined(WIN32)
@@ -116,7 +118,7 @@ int send_client_request(SOCKET socket, client_request_t *request);
  * @param request
  * @param data
  */
-void serialize_server_request(server_request_t *request, char data[2048]);
+void serialize_server_request(server_request_t *request, char data[1024]);
 
 /**
  *
@@ -125,7 +127,7 @@ void serialize_server_request(server_request_t *request, char data[2048]);
  * @param request
  * @param data
  */
-void deserialize_server_request(char data[2048], server_request_t *request);
+void deserialize_server_request(char data[1024], server_request_t *request);
 
 /**
  * Serialize une requete client dans une chaine.
