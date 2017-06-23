@@ -321,7 +321,7 @@ int on_place_bomb(server_t *server, int position) {
 
     server->updated = 1;
     server->map[server->info[position][INFO_X]][server->info[position][INFO_Y]][0] = MAP_BOMB;
-    server->map[server->info[position][INFO_X]][server->info[position][INFO_Y]][1] = 20;
+    server->map[server->info[position][INFO_X]][server->info[position][INFO_Y]][1] = 100;
 
     return 1;
 }
