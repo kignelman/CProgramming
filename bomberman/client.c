@@ -10,7 +10,7 @@ SDL_Surface *load_image(char *source) {
 #if defined(WIN32)
     strcpy(pf, ".");
 #elif defined(linux)
-    strcpy(pf, "/usr/share/bomberman");
+    strcpy(pf, ".");
 #else
     strcpy(pf, ".");
 #endif
@@ -26,6 +26,10 @@ void construct(client_t *client, char *hostname, int port) {
                                       MAP_WIDTH * 32,
                                       MAP_HEIGHT * 32,
                                       SDL_WINDOW_SHOWN);
+    if (client->window == NULL) {
+	printf("Could not create window: %s\n", SDL_GetError());
+	return;
+    }
     client->bomb_image = load_image("/sprites/Bomb.png");
     client->up_image = load_image("/sprites/BUp.png");
     client->right_image = load_image("/sprites/BRight.png");
@@ -50,6 +54,9 @@ int reset_fd_set(client_t *client) {
 void on_disconnect(client_t *client) {
     if (client->socket != INVALID_SOCKET)
         closesocket(client->socket);
+
+
+
     client->socket = INVALID_SOCKET;
     client->start = 0;
     printf("Disconnect \n");
@@ -62,14 +69,14 @@ void listen_receive_server(client_t *client) {
 
     if (!FD_ISSET(client->socket, &(client->set)))
         return;
-
+    
     reading = recv_server_request(client->socket, &request);
-
     if (reading == 0)
         on_disconnect(client);
     if (reading > 0) {
-        if (request.protocol == GP_UPDATE)
-            draw(client, request);
+	    if (request.protocol == GP_UPDATE) {
+		    draw(client, request);
+	    }
     }
 
 }
@@ -83,7 +90,8 @@ void draw_image_at(client_t *client, SDL_Surface *image, int i, int j) {
 void draw(client_t *client, server_request_t request) {
     int i, j;
     SDL_Surface *surface = SDL_GetWindowSurface(client->window);
-    SDL_Rect rect = {0, 0, MAP_WIDTH * 32, MAP_HEIGHT * 32};
+    SDL_Rect rect = { 0, 0, MAP_WIDTH * 32, MAP_HEIGHT * 32 };
+
     SDL_FillRect(surface, &rect, SDL_MapRGB(surface->format, 0, 0, 0));
     for (i = 0; i < MAP_HEIGHT; i++) {
         for (j = 0; j < MAP_WIDTH; j++) {
@@ -143,7 +151,6 @@ void draw(client_t *client, server_request_t request) {
             }
         }
     }
-
     SDL_UpdateWindowSurface(client->window);
 }
 
@@ -198,6 +205,7 @@ void run(client_t *client) {
 
     int reading;
     struct timeval time;
+
     client->start = 1;
     while (client->start && client->socket != INVALID_SOCKET) {
         time.tv_sec = 0;
@@ -209,7 +217,6 @@ void run(client_t *client) {
             listen_key_event(client);
         }
     }
-
     if (client->socket != INVALID_SOCKET) {
         on_disconnect(client);
     }

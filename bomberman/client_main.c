@@ -19,6 +19,7 @@ int main(int args, char **argv) {
     int help_is_show = 0;
     start_socket();
     client_t client;
+
     SDL_Init(SDL_INIT_VIDEO);
     if (args == 2 && strcmp("help", argv[1]) == 0) {
         help();

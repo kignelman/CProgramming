@@ -46,10 +46,9 @@ int load_map(server_t *server, char *filename) {
 void construct(server_t *server, int port) {
 
     int i, j;
+
     server->socket = create_server("0.0.0.0", port);
-
     server->start = 0;
-
     for (i = 0; i < MAX_CLIENTS; i++) {
         server->info[i][INFO_ALIVE] = 0;
         server->info[i][INFO_NEXT_DIRECTION] = -1;
@@ -68,7 +67,7 @@ void construct(server_t *server, int port) {
 #if  defined(WIN32)
     load_map(server, "map.txt");
 #elif defined(linux) || defined(APPLE) || defined(__APPLE__)
-    load_map(server, "/usr/share/bomberman/map.txt");
+    load_map(server, "map.txt");
 #endif
 }
 

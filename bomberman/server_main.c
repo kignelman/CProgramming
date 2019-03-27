@@ -14,6 +14,7 @@ void help() {
 int main(int args, char **argv) {
     start_socket();
     server_t server;
+
     if (args >= 2) {
         if (strcmp("help", argv[1]) == 0) {
             help();
